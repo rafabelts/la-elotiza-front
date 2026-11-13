@@ -1,10 +1,9 @@
-import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
 export default function HomePage() {
   return (
-    <AppShell>
+    <>
       <h1 className="text-2xl leading-tight font-extrabold tracking-[-0.01em]">
         Punto de venta
       </h1>
@@ -27,6 +26,6 @@ export default function HomePage() {
           </p>
         </div>
       </Card>
-    </AppShell>
+    </>
   );
 }

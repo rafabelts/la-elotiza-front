@@ -145,6 +145,11 @@
   .ui-dialog__title { margin: 0; font-size: 1.375rem; font-weight: 800; line-height: 1.25; }
   .ui-dialog__close { min-width: 2.75rem; padding: 0.25rem; font-size: 1.5rem; line-height: 1; }
 
+  .session-key { display: inline-flex; width: 4.5rem; height: 4.5rem; align-items: center; justify-content: center; border: 1px solid var(--color-line); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font-size: 1.5rem; font-weight: 700; cursor: pointer; }
+  .session-key:hover { background: var(--color-surface-muted); }
+  .session-key:active { background: var(--color-brand-tint); }
+  .session-key:disabled { color: var(--color-disabled); cursor: not-allowed; }
+
   @media (max-width: 40rem) {
     .ui-card { padding: 1.25rem; }
     .ui-dialog { padding: 1.25rem; }
