@@ -1,4 +1,6 @@
 import { AppShell } from "@/components/app-shell";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export default function HomePage() {
   return (
@@ -6,14 +8,13 @@ export default function HomePage() {
       <h1 className="text-2xl leading-tight font-extrabold tracking-[-0.01em]">
         Punto de venta
       </h1>
-      <section
+      <Card
+        as="section"
         aria-labelledby="welcome-title"
-        className="mt-6 rounded-card border border-line bg-surface p-6 sm:p-10"
+        className="mt-6 sm:p-10"
       >
         <div className="max-w-xl">
-          <p className="mb-4 inline-block rounded-full bg-brand-tint px-3 py-1.5 text-xs font-bold text-brand-deep">
-            En preparación
-          </p>
+          <Badge tone="warm" className="mb-4">En preparación</Badge>
           <h2
             id="welcome-title"
             className="text-xl leading-snug font-extrabold tracking-[-0.01em]"
@@ -25,7 +26,7 @@ export default function HomePage() {
             aún no están disponibles.
           </p>
         </div>
-      </section>
+      </Card>
     </AppShell>
   );
 }
