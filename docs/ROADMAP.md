@@ -34,6 +34,10 @@ The `api_integrator` owns domain rules, contracts, services, hooks, and data err
 
 ## Milestones
 
+### Prerequisite. Design System & UI Foundation
+
+Before milestone 1, establish the POS prototype's shared design tokens, global styling, and reusable presentation components. Keep this work independent of session, catalog, order, payment, and other functional behavior. The `api_integrator` defines component boundaries and contracts; the `designer` implements the visual foundation; the `reviewer` independently tests and validates it. Completion requires the common local quality gate and independent QA. See [foundation architecture](foundation-architecture.md), [foundation usage](foundation-usage.md), and the [milestone report](reports/design-system.md) for the implemented scope and verification status.
+
 ### 1. Session entry and POS navigation
 
 - **Objective and usable increment:** Staff can use a provisional PIN login and navigate the POS shell, with `Equipo` hidden and access denied for cajeros.
