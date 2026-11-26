@@ -3,7 +3,7 @@
 3. Cuando el cajero agregue un producto a una orden, el sistema deberá permitir seleccionar la cantidad solicitada.
 4. Cuando un producto disponga de diferentes tamaños, el sistema deberá permitir seleccionar uno de los tamaños disponibles.
 5. Cuando un producto disponga de toppings o complementos, el sistema deberá permitir seleccionar uno o más de los disponibles.
-6. El sistema deberá permitir registrar indicaciones especiales para cada producto agregado a una orden.
+6. El sistema deberá permitir registrar indicaciones especiales para los productos agregados a una orden que admitan esta opción; las bebidas no deberán mostrarla.
 7. Cuando el cajero agregue, modifique o elimine un producto o una personalización de la orden, el sistema deberá actualizar el total de la venta.
 8. Mientras una orden no haya sido cobrada, el sistema deberá permitir al cajero modificar los productos, cantidades, personalizaciones e indicaciones especiales registrados.
 9. Mientras una orden no haya sido cobrada, el sistema deberá permitir al cajero eliminar productos registrados en la orden.
