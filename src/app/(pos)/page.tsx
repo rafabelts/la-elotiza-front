@@ -21,5 +21,10 @@ export default function HomePage() {
     );
   }
 
-  return <CatalogScreen catalog={catalog.data} />;
+  return (
+    <CatalogScreen
+      catalog={catalog.data.catalog}
+      savedMenu={catalog.data.source === "saved" ? { savedAt: catalog.data.savedAt, isRefreshing: catalog.isFetching, onRetry: () => { void catalog.refetch(); } } : undefined}
+    />
+  );
 }

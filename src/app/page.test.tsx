@@ -3,6 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Catalog } from "@/features/catalog/types";
+import { catalogStorageKey } from "@/features/catalog/cache";
 import { resetCatalogReadService, setCatalogReadService } from "@/features/catalog/service";
 import HomePage from "./(pos)/page";
 
@@ -16,6 +17,7 @@ function renderPage() {
 
 describe("catalog page", () => {
   beforeEach(() => {
+    window.localStorage.clear();
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: vi.fn(function (this: HTMLDialogElement) {
       this.setAttribute("open", "");
       this.querySelector<HTMLButtonElement>("button")?.focus();
@@ -28,6 +30,7 @@ describe("catalog page", () => {
 
   afterEach(() => {
     resetCatalogReadService();
+    window.localStorage.clear();
     if (originalShowModal) Object.defineProperty(HTMLDialogElement.prototype, "showModal", originalShowModal);
     else Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal");
     if (originalClose) Object.defineProperty(HTMLDialogElement.prototype, "close", originalClose);
@@ -124,5 +127,60 @@ describe("catalog page", () => {
     setCatalogReadService({ readCatalog: async () => ({ categories: [{ id: "esquites", name: "Esquites" }], products: [] }) });
     renderPage();
     expect(await screen.findByText("No hay productos en esta categoría.")).toBeInTheDocument();
+  });
+
+  it("keeps the last fetched menu available after remount when the catalog read fails", async () => {
+    const readCatalog = vi.fn().mockResolvedValueOnce({
+      categories: [{ id: "bebidas", name: "Bebidas" }],
+      products: [],
+    } satisfies Catalog).mockRejectedValueOnce(new Error("connection lost"));
+    setCatalogReadService({ readCatalog });
+
+    const firstPage = renderPage();
+    expect(await screen.findByRole("group", { name: "Categorías del menú" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bebidas" })).toBeInTheDocument();
+    firstPage.unmount();
+
+    renderPage();
+    expect(await screen.findByText(/Mostrando menú guardado en este dispositivo/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bebidas" })).toBeInTheDocument();
+    expect(readCatalog).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes a saved menu and removes its stale notice when the read recovers", async () => {
+    const user = userEvent.setup();
+    const readCatalog = vi.fn()
+      .mockResolvedValueOnce({ categories: [{ id: "bebidas", name: "Bebidas" }], products: [] } satisfies Catalog)
+      .mockRejectedValueOnce(new Error("connection lost"))
+      .mockResolvedValueOnce({ categories: [{ id: "elotes", name: "Elotes" }], products: [] } satisfies Catalog);
+    setCatalogReadService({ readCatalog });
+
+    const firstPage = renderPage();
+    await screen.findByRole("button", { name: "Bebidas" });
+    firstPage.unmount();
+    renderPage();
+    expect(await screen.findByText(/Mostrando menú guardado en este dispositivo/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reintentar actualización" }));
+    expect(await screen.findByRole("button", { name: "Elotes" })).toBeInTheDocument();
+    expect(screen.queryByText(/Mostrando menú guardado en este dispositivo/)).not.toBeInTheDocument();
+    expect(readCatalog).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ["malformed JSON", "{not-json"],
+    ["invalid catalog data", JSON.stringify({
+      schemaVersion: 1,
+      savedAt: Date.now(),
+      catalog: { categories: [{ id: "bebidas", name: "Bebidas" }], products: "invalid" },
+    })],
+  ])("does not show %s as a saved menu", async (_description, snapshot) => {
+    window.localStorage.setItem(catalogStorageKey, snapshot);
+    setCatalogReadService({ readCatalog: async () => { throw new Error("connection lost"); } });
+
+    renderPage();
+    expect(await screen.findByRole("alert")).toHaveTextContent("No se pudo cargar el menú");
+    expect(screen.queryByText(/Mostrando menú guardado en este dispositivo/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
   });
 });

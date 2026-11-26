@@ -22,7 +22,13 @@ export type PreparedConfiguration = {
   totalPriceCents: number;
 };
 
-export function CatalogScreen({ catalog }: { catalog: Catalog }) {
+type SavedMenuStatus = {
+  savedAt: number;
+  isRefreshing: boolean;
+  onRetry: () => void;
+};
+
+export function CatalogScreen({ catalog, savedMenu }: { catalog: Catalog; savedMenu?: SavedMenuStatus }) {
   const [categoryId, setCategoryId] = useState(catalog.categories[0]?.id ?? "");
   const [activeProduct, setActiveProduct] = useState<CatalogProduct | null>(null);
   const [prepared, setPrepared] = useState<PreparedConfiguration | null>(null);
@@ -44,6 +50,18 @@ export function CatalogScreen({ catalog }: { catalog: Catalog }) {
           </div>
           <p className="catalog-provisional">Menú y precios de demostración</p>
         </div>
+
+        {savedMenu && (
+          <div className="catalog-saved-menu" role="status">
+            <div>
+              <p className="catalog-saved-menu__title">Mostrando menú guardado en este dispositivo</p>
+              <p>Los precios pueden estar desactualizados. Última actualización: <time dateTime={new Date(savedMenu.savedAt).toISOString()}>{new Date(savedMenu.savedAt).toLocaleString("es-MX", { dateStyle: "medium", timeStyle: "short" })}</time>.</p>
+            </div>
+            <Button variant="outline" disabled={savedMenu.isRefreshing} onClick={savedMenu.onRetry}>
+              {savedMenu.isRefreshing ? "Actualizando…" : "Reintentar actualización"}
+            </Button>
+          </div>
+        )}
 
         {catalog.categories.length > 0 ? (
           <>
