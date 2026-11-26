@@ -21,9 +21,10 @@ export type ProductConfiguratorDialogProps = {
   onClose: () => void;
   onAccept: (configuration: PreparedConfiguration) => void;
   initial?: PreparedConfiguration;
+  error?: string | null;
 };
 
-export function ProductConfiguratorDialog({ product, onClose, onAccept, initial }: ProductConfiguratorDialogProps) {
+export function ProductConfiguratorDialog({ product, onClose, onAccept, initial, error }: ProductConfiguratorDialogProps) {
   const noteId = useId();
   const [selection, setSelection] = useState<ProductSelection>(() => {
     if (initial) return initial.selection;
@@ -110,6 +111,7 @@ export function ProductConfiguratorDialog({ product, onClose, onAccept, initial 
           />
         )}
       </div>
+      {error && <p role="alert" className="catalog-dialog__error">{error}</p>}
       <div className="catalog-dialog__footer">
         <QuantityStepper label="cantidad" value={quantity} onChange={setQuantity} min={1} />
         <div className="catalog-dialog__actions">

@@ -55,7 +55,8 @@ describe("catalog page", () => {
     await user.click(within(dialog).getByRole("button", { name: "Aumentar cantidad" }));
     expect(within(dialog).getByRole("button", { name: /Preparar/ })).toHaveTextContent(/30[.,]00/);
     await user.click(within(dialog).getByRole("button", { name: /Preparar/ }));
-    expect(screen.getByRole("status")).toHaveTextContent("Configuración lista");
+    expect(screen.getByRole("complementary", { name: "Orden actual" })).toHaveTextContent("2 × Agua natural");
+    expect(screen.getByRole("complementary", { name: "Orden actual" })).toHaveTextContent(/30[.,]00/);
     expect(water).toHaveFocus();
   });
 
@@ -67,12 +68,79 @@ describe("catalog page", () => {
     const esquiteDialog = screen.getByRole("dialog", { name: "Esquite tradicional" });
     await user.type(within(esquiteDialog).getByRole("textbox", { name: "Indicación especial" }), "Poco limón");
     await user.click(within(esquiteDialog).getByRole("button", { name: /Preparar/ }));
-    expect(screen.getByRole("status")).toHaveTextContent("Poco limón");
+    expect(screen.getByRole("complementary", { name: "Orden actual" })).toHaveTextContent("Indicación: Poco limón");
 
     await user.click(within(categories).getByRole("button", { name: "Bebidas" }));
     await user.click(screen.getByRole("button", { name: /Bolsa de sabritas, / }));
     const chipsDialog = screen.getByRole("dialog", { name: "Bolsa de sabritas" });
     expect(within(chipsDialog).getByRole("textbox", { name: "Indicación especial" })).toBeInTheDocument();
+  });
+
+  it("adds distinct configured lines, edits notes and options, and updates draft totals after quantity and removal", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("group", { name: "Categorías del menú" });
+    const panel = screen.getByRole("complementary", { name: "Orden actual" });
+    expect(within(panel).getByText("Toca un producto para agregarlo.")).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Confirmar orden" })).toBeDisabled();
+
+    await user.click(screen.getByRole("button", { name: /Esquite tradicional, desde/ }));
+    let dialog = screen.getByRole("dialog", { name: "Esquite tradicional" });
+    await user.type(within(dialog).getByRole("textbox", { name: "Indicación especial" }), "Sin chile");
+    await user.click(within(dialog).getByRole("button", { name: /Preparar/ }));
+    expect(within(panel).getByText("Indicación: Sin chile")).toBeInTheDocument();
+    expect(within(panel).getByRole("textbox", { name: "Nombre del cliente" })).toHaveAttribute("aria-invalid", "true");
+    expect(within(panel).getByText("Falta el nombre para llamar al cliente.")).toBeInTheDocument();
+    expect(within(panel).getByRole("status", { name: /Total de la orden/ })).toHaveTextContent(/40[.,]00/);
+
+    await user.type(within(panel).getByRole("textbox", { name: "Nombre del cliente" }), "Ana");
+    expect(within(panel).getByRole("textbox", { name: "Nombre del cliente" })).not.toHaveAttribute("aria-invalid", "true");
+    expect(within(panel).queryByText("Borrador listo para confirmar.")).not.toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: /Aumentar cantidad de Esquite tradicional/ }));
+    expect(within(panel).getByRole("status", { name: /Total de la orden/ })).toHaveTextContent(/80[.,]00/);
+
+    await user.click(screen.getByRole("button", { name: /Esquite tradicional, desde/ }));
+    dialog = screen.getByRole("dialog", { name: "Esquite tradicional" });
+    await user.click(within(dialog).getByRole("button", { name: /Preparar/ }));
+    expect(within(panel).getAllByRole("button", { name: /Editar Esquite tradicional/ })).toHaveLength(2);
+    expect(screen.getByText("Producto agregado al borrador.")).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: /Editar Esquite tradicional, línea 1/ }));
+    expect(screen.queryByText("Producto agregado al borrador.")).not.toBeInTheDocument();
+    dialog = screen.getByRole("dialog", { name: "Esquite tradicional" });
+    expect(within(dialog).getByRole("textbox", { name: "Indicación especial" })).toHaveValue("Sin chile");
+    await user.click(within(dialog).getByRole("button", { name: /12 oz/ }));
+    await user.clear(within(dialog).getByRole("textbox", { name: "Indicación especial" }));
+    await user.type(within(dialog).getByRole("textbox", { name: "Indicación especial" }), "Poco limón");
+    await user.click(within(dialog).getByRole("button", { name: /Preparar/ }));
+    expect(screen.queryByText("Producto actualizado en el borrador.")).not.toBeInTheDocument();
+    expect(within(panel).getByText("Indicación: Poco limón")).toBeInTheDocument();
+    expect(within(panel).queryByText("Indicación: Sin chile")).not.toBeInTheDocument();
+    expect(within(panel).getByRole("status", { name: /Total de la orden/ })).toHaveTextContent(/136[.,]00/);
+
+    await user.click(within(panel).getByRole("button", { name: /Quitar Esquite tradicional, línea 2/ }));
+    expect(within(panel).getByRole("status", { name: /Total de la orden/ })).toHaveTextContent(/96[.,]00/);
+    await user.click(within(panel).getByRole("button", { name: /Disminuir cantidad de Esquite tradicional, línea 1/ }));
+    expect(within(panel).getByRole("status", { name: /Total de la orden/ })).toHaveTextContent(/48[.,]00/);
+    await user.click(within(panel).getByRole("button", { name: /Disminuir cantidad de Esquite tradicional, línea 1/ }));
+    expect(within(panel).getByText("Toca un producto para agregarlo.")).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Confirmar orden" })).toBeDisabled();
+  });
+
+  it("clears the draft explicitly and never presents a kitchen confirmation as completed", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findByRole("group", { name: "Categorías del menú" });
+    const panel = screen.getByRole("complementary", { name: "Orden actual" });
+    await user.type(within(panel).getByRole("textbox", { name: "Nombre del cliente" }), "Ana");
+    await user.click(screen.getByRole("button", { name: /Esquite tradicional, desde/ }));
+    await user.click(within(screen.getByRole("dialog", { name: "Esquite tradicional" })).getByRole("button", { name: /Preparar/ }));
+    expect(within(panel).queryByText("Borrador listo para confirmar.")).not.toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Confirmar orden" })).toBeDisabled();
+    expect(within(panel).getByText(/envío a cocina estará disponible/)).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: "Descartar borrador y empezar de nuevo" }));
+    expect(within(panel).getByRole("textbox", { name: "Nombre del cliente" })).toHaveValue("");
+    expect(within(panel).getByText("Toca un producto para agregarlo.")).toBeInTheDocument();
+    expect(within(panel).getByRole("status", { name: /Total de la orden/ })).toHaveTextContent(/0[.,]00/);
   });
 
   it("blocks required choices and reflects size and paid options in the total", async () => {

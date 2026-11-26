@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { OrderPanel } from "@/features/order/components/order-panel";
+import { useDraftOrder } from "@/features/order/use-draft-order";
 import type { Catalog, CatalogProduct, ProductSelection } from "../types";
 import { ProductConfiguratorDialog } from "./product-configurator-dialog";
 
@@ -31,8 +33,23 @@ type SavedMenuStatus = {
 export function CatalogScreen({ catalog, savedMenu }: { catalog: Catalog; savedMenu?: SavedMenuStatus }) {
   const [categoryId, setCategoryId] = useState(catalog.categories[0]?.id ?? "");
   const [activeProduct, setActiveProduct] = useState<CatalogProduct | null>(null);
-  const [prepared, setPrepared] = useState<PreparedConfiguration | null>(null);
+  const [editingLineId, setEditingLineId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState("");
   const openerRef = useRef<HTMLButtonElement | null>(null);
+  const order = useDraftOrder(catalog);
+
+  const editingLine = editingLineId
+    ? order.lines.find((view) => view.line.id === editingLineId)
+    : undefined;
+  const initial = editingLine
+    ? {
+        product: activeProduct ?? editingLine.product,
+        selection: editingLine.line.selection,
+        quantity: editingLine.line.quantity,
+        note: editingLine.line.note,
+        totalPriceCents: editingLine.totalPriceCents,
+      }
+    : undefined;
 
   useEffect(() => {
     if (!activeProduct) openerRef.current?.focus();
@@ -41,14 +58,17 @@ export function CatalogScreen({ catalog, savedMenu }: { catalog: Catalog; savedM
   const products = catalog.products.filter((item) => item.categoryId === category?.id);
 
   return (
-    <main className="catalog-layout">
+    <div className="catalog-layout">
       <section aria-labelledby="catalog-heading" className="catalog-main">
         <div className="catalog-intro">
           <div>
             <h1 id="catalog-heading" className="text-2xl font-extrabold tracking-[-0.01em]">Tomar orden</h1>
-            <p className="mt-1 text-sm text-muted">Elige un producto y prepara su configuración.</p>
+            <p className="mt-1 text-sm text-muted">Elige productos, personalízalos y revisa tu borrador.</p>
           </div>
-          <p className="catalog-provisional">Menú y precios de demostración</p>
+          <div className="catalog-intro__actions">
+            <a href="#orden-actual" className="catalog-order-link">Ver borrador · {order.itemCount} {order.itemCount === 1 ? "producto" : "productos"}</a>
+            <p className="catalog-provisional">Menú y precios de demostración</p>
+          </div>
         </div>
 
         {savedMenu && (
@@ -71,7 +91,7 @@ export function CatalogScreen({ catalog, savedMenu }: { catalog: Catalog; savedM
                   type="button"
                   key={item.id}
                   aria-pressed={item.id === category?.id}
-                  onClick={() => { setCategoryId(item.id); setPrepared(null); }}
+                  onClick={() => setCategoryId(item.id)}
                   className={`catalog-filter ${item.id === category?.id ? `catalog-filter--active ${categoryClasses[item.id] ?? ""}` : ""}`}
                 >
                   {item.name}
@@ -90,7 +110,7 @@ export function CatalogScreen({ catalog, savedMenu }: { catalog: Catalog; savedM
                       type="button"
                       key={product.id}
                       className={`catalog-card ${categoryClasses[product.categoryId] ?? ""}`}
-                      onClick={(event) => { openerRef.current = event.currentTarget; setActiveProduct(product); if (prepared?.product.id !== product.id) setPrepared(null); }}
+                      onClick={(event) => { openerRef.current = event.currentTarget; setEditingLineId(null); setActiveProduct(product); }}
                       aria-label={`${product.name}, ${sizeGroup ? "desde " : ""}${currency.format(startingPrice / 100)}. Personalizar`}
                     >
                       <span className="catalog-card__name">{product.name}</span>
@@ -104,26 +124,60 @@ export function CatalogScreen({ catalog, savedMenu }: { catalog: Catalog; savedM
           </>
         ) : <p className="catalog-empty" role="status">El menú aún no tiene categorías.</p>}
 
-        {prepared && (
-          <div className="catalog-prepared" role="status">
-            <div>
-              <p className="font-bold">Configuración lista</p>
-              <p className="text-sm">{prepared.quantity} × {prepared.product.name} · {currency.format(prepared.totalPriceCents / 100)}</p>
-              {prepared.note && <p className="text-sm">Indicación: {prepared.note}</p>}
-            </div>
-            <Button variant="outline" onClick={(event) => { openerRef.current = event.currentTarget; setActiveProduct(prepared.product); }}>Modificar</Button>
-          </div>
-        )}
+        {actionMessage && <p role="status" className="catalog-action-message">{actionMessage}</p>}
       </section>
+      <OrderPanel
+        customerName={order.draft.customerName}
+        lines={order.lines}
+        itemCount={order.itemCount}
+        totalCents={order.totalCents}
+        draftIssue={order.draftIssue}
+        mutationError={order.mutationError}
+        onCustomerNameChange={order.setCustomerName}
+        onEditLine={(lineId) => {
+          const view = order.lines.find((item) => item.line.id === lineId);
+          if (!view) return;
+          openerRef.current = document.activeElement instanceof HTMLButtonElement ? document.activeElement : null;
+          setActionMessage("");
+          setEditingLineId(lineId);
+          setActiveProduct(catalog.products.find((product) => product.id === view.line.productId) ?? view.product);
+        }}
+        onSetLineQuantity={(lineId, quantity) => {
+          if (order.setLineQuantity(lineId, quantity)) setActionMessage("");
+        }}
+        onRemoveLine={(lineId) => {
+          if (!order.removeLine(lineId)) return;
+          setActionMessage("Producto quitado del borrador.");
+        }}
+        onResetDraft={() => {
+          if (!order.resetDraft()) return;
+          setActionMessage("Borrador descartado. Puedes empezar una nueva orden.");
+        }}
+      />
       {activeProduct && (
         <ProductConfiguratorDialog
-          key={activeProduct.id}
+          key={editingLineId ?? activeProduct.id}
           product={activeProduct}
-          onClose={() => setActiveProduct(null)}
-          onAccept={(configuration) => { setPrepared(configuration); setActiveProduct(null); }}
-          initial={prepared?.product.id === activeProduct.id ? prepared : undefined}
+          onClose={() => { setActiveProduct(null); setEditingLineId(null); }}
+          error={order.mutationError}
+          onAccept={(configuration) => {
+            const input = {
+              productId: configuration.product.id,
+              selection: configuration.selection,
+              quantity: configuration.quantity,
+              note: configuration.note,
+            };
+            const saved = editingLineId
+              ? order.updateLine(editingLineId, input)
+              : order.addLine(input);
+            if (!saved) return;
+            setActionMessage(editingLineId ? "" : "Producto agregado al borrador.");
+            setActiveProduct(null);
+            setEditingLineId(null);
+          }}
+          initial={initial}
         />
       )}
-    </main>
+    </div>
   );
 }
