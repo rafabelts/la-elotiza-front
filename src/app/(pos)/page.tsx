@@ -1,31 +1,25 @@
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { CatalogScreen } from "@/features/catalog/components/catalog-screen";
+import { useCatalog } from "@/features/catalog/use-catalog";
 
 export default function HomePage() {
-  return (
-    <>
-      <h1 className="text-2xl leading-tight font-extrabold tracking-[-0.01em]">
-        Punto de venta
-      </h1>
-      <Card
-        as="section"
-        aria-labelledby="welcome-title"
-        className="mt-6 sm:p-10"
-      >
-        <div className="max-w-xl">
-          <Badge tone="warm" className="mb-4">En preparación</Badge>
-          <h2
-            id="welcome-title"
-            className="text-xl leading-snug font-extrabold tracking-[-0.01em]"
-          >
-            Bienvenido a La Elotiza
-          </h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted">
-            Estamos preparando tu espacio de trabajo. Las funciones de venta
-            aún no están disponibles.
-          </p>
-        </div>
-      </Card>
-    </>
-  );
+  const catalog = useCatalog();
+
+  if (catalog.isPending) {
+    return <main className="catalog-state" role="status"><h1>Tomar orden</h1><p>Cargando menú…</p></main>;
+  }
+
+  if (catalog.isError) {
+    return (
+      <main className="catalog-state" role="alert">
+        <h1>Tomar orden</h1>
+        <p>No se pudo cargar el menú. Intenta de nuevo.</p>
+        <Button onClick={() => { void catalog.refetch(); }}>Reintentar</Button>
+      </main>
+    );
+  }
+
+  return <CatalogScreen catalog={catalog.data} />;
 }

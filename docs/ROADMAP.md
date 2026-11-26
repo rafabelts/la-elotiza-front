@@ -148,7 +148,7 @@ Before milestone 1, establish the POS prototype's shared design tokens, global s
 
 ## Decisions to resolve before dependent implementation or production release
 
-1. **Backend and durability:** No API endpoints, persistence, multi-register synchronization or offline behavior are specified. Confirm data ownership and failure/retry semantics before a real adapter. Do not treat an in-memory/browser mock as a durable sales ledger.
+1. **Backend and durability:** No API endpoints, persistence, or multi-register synchronization are specified. The catalog API will supply products and prices; confirm its response contract and failure/retry semantics before a real adapter. No offline mode is planned. Do not treat an in-memory/browser mock as a durable sales ledger.
 2. **Session security:** Confirm the identity source, PIN storage/verification, session lifetime and revocation. Prototype PINs must never appear in production UI or bundled fixtures.
 3. **Menu authority:** Confirm current products, prices and option rules. Prototype menu and uploaded physical-menu images are references, not an approved live catalog.
 4. **Identifiers and shifts:** Confirm order-folio and transfer-concept uniqueness scope, shift/day boundary, timezone, opening fund source and close/reopen policy. Prototype dates, times, folios and fund values are fixed examples.

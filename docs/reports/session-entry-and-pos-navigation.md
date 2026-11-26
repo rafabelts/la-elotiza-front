@@ -4,11 +4,13 @@
 
 Roadmap milestone 1 implements provisional staff sign-in by four-digit PIN, sign-out, role-aware POS navigation, and server-side access checks for protected routes. The `Equipo` destination is shown only to an encargado and denies direct cajero access. `Tomar orden`, `Órdenes`, `Corte`, and `Equipo` contain clearly labeled placeholders for later milestones; no sale, order, cash-close, or team-administration behavior was added.
 
+The PIN accepts physical keyboard digits and Backspace when focus is on the page, a staff choice, a keypad button, or the PIN field. The on-screen numeric keypad remains clickable. A visible field hint explains both entry methods.
+
 ## 2. Branch and scope
 
 - **Active branch:** `feat/session-entry`, verified before edits and after validation.
 - **Base:** Clean, committed `feat/design-system` (`09d6e15`), because this prerequisite is not yet in locally available `main` (`e62ef2b`). The new branch was created before implementation.
-- **Working tree:** Uncommitted feature files listed below. No commit, push, Pull Request, merge, or deployment was performed.
+- **Git state after follow-up:** Commit `41b588c` (`feat: initial nav`) appeared on `feat/session-entry` during the keyboard-entry follow-up and includes its implementation and regression tests. It was not created by the agents. This report update is an uncommitted working-tree change. No push, Pull Request, merge, or deployment was performed by the agents.
 - **Acceptance basis:** [Roadmap milestone 1](../ROADMAP.md) and requirements 27–29, interpreted with the [POS prototype](../prototipo/prototipo-elotiza.dc.html) and [design system](../design-system.md).
 
 ## 3. Files created or modified
@@ -58,7 +60,7 @@ Route-group pages preserve the public URLs while keeping the shell and session g
 
 ## 5. Components and services implemented
 
-- **Login screen:** Native radio staff selector, labeled password PIN field, 72 px numeric keypad, Backspace/delete, four-digit submit gate, inline announced errors, empty staff state, and disabled controls during sign-in.
+- **Login screen:** Native radio staff selector, labeled password PIN field, 72 px clickable numeric keypad, physical digit/Backspace entry across the login view, four-digit submit gate, inline announced errors, empty staff state, and disabled controls during sign-in. Focused PIN-field typing is handled natively to avoid adding a digit twice.
 - **POS shell:** Skip link, branded header, route links with `aria-current`, wrapped narrow-screen navigation, current staff name, manager-only `Equipo` link, sign-out pending/error feedback.
 - **Route states:** Login loading and error/retry views; clearly marked placeholder destinations for future workflows.
 - **Session service:** Provisional staff list and credential check, typed server actions, expiring/revocable mock sessions, and protected route layouts.
@@ -69,9 +71,9 @@ No real REST endpoint was integrated or invented. Next server actions call a **s
 
 ## 7. Automated tests
 
-The reviewer updated one existing test and added seven test files. Tests cover PIN format and action input, role rules, correct/incorrect credentials, service failures, session creation/revocation/expiry, staff selection, keypad and physical keyboard entry, correction, inline errors, pending state, sign-out, navigation visibility, direct-route guards, and login loading/error recovery. Existing design-foundation and provider tests also ran.
+The reviewer updated one existing test and added seven test files. Tests cover PIN format and action input, role rules, correct/incorrect credentials, service failures, session creation/revocation/expiry, staff selection, clickable keypad and physical keyboard entry, correction, inline errors, pending state, sign-out, navigation visibility, direct-route guards, and login loading/error recovery. Four follow-up regressions cover keyboard entry with focus on the page, staff radio, keypad button, and PIN field, plus duplicate input and modifier behavior. Existing design-foundation and provider tests also ran.
 
-**Result:** 12 test files passed, **42/42 tests passed**. No live backend is used.
+**Result:** 12 test files passed, **46/46 tests passed**. No live backend is used.
 
 ## 8. Validation and manual checks
 
@@ -81,7 +83,7 @@ The orchestrator ran `npm run check` after independent QA; it executes all four 
 | --- | --- | --- |
 | `npm run lint` | **PASS** | ESLint completed with zero warnings/errors. |
 | `npm run typecheck` | **PASS** | Next route types generated; TypeScript completed. |
-| `npm run test:ci` | **PASS** | Vitest: 12 files, 42 tests passed. |
+| `npm run test:ci` | **PASS** | Vitest: 12 files, 46 tests passed after the keyboard-entry follow-up. |
 | `npm run build` | **PASS** | Next.js 16.4.6 Webpack compiled and generated `/`, `/ordenes`, `/corte`, `/equipo`, and `/iniciar-sesion` as dynamic routes. |
 
 **HTTP smoke checks:** Local development `/iniciar-sesion` returned HTTP 200 with the two demo staff names and no PIN in rendered HTML. Anonymous direct `/equipo` returned HTTP 307 to `/iniciar-sesion`. The API integrator also searched `.next/static` for demo PIN values and found none. These checks supplement the automated role tests; they do not prove a complete browser login journey.
@@ -90,7 +92,7 @@ The orchestrator ran `npm run check` after independent QA; it executes all four 
 
 ## 9. Independent QA findings and verdict
 
-**Verdict: PASS WITH WARNINGS.** The reviewer reported no remaining confirmed P0, P1, P2, or P3 defects. A proposed staff-list outage finding was withdrawn after verifying that Next's existing `error.tsx` catches rejected page renders and offers an announced error and retry. The reviewer retained outage/recovery coverage and added loading-state coverage. A real mock-service test initially could not resolve `server-only` in Vitest; a scoped test-only alias resolved that tooling issue without changing production behavior. The final gate was rerun and passed.
+**Verdict: PASS WITH WARNINGS.** The reviewer reported no remaining confirmed P0, P1, P2, or P3 defects. A proposed staff-list outage finding was withdrawn after verifying that Next's existing `error.tsx` catches rejected page renders and offers an announced error and retry. The reviewer retained outage/recovery coverage and added loading-state coverage. A real mock-service test initially could not resolve `server-only` in Vitest; a scoped test-only alias resolved that tooling issue without changing production behavior. The keyboard-entry follow-up was independently revalidated, and the final gate was rerun and passed with 46 tests.
 
 ## 10. Remaining issues and unverified scenarios
 
@@ -110,9 +112,9 @@ The orchestrator ran `npm run check` after independent QA; it executes all four 
 | Cajero cannot access team administration by direct navigation. | **PASS** | Server role layout and direct-guard tests; anonymous HTTP redirect also verified. |
 | Navigation reflects active route and role. | **PASS** | Shell tests for `aria-current` and role-specific links. |
 | Loading, empty, and error states are handled. | **PASS** | Login screen and Next loading/error boundaries, with reviewer tests. |
-| Relevant automated tests and local quality gates pass. | **PASS** | 42/42 tests and all four scripts passed. |
+| Relevant automated tests and local quality gates pass. | **PASS** | 46/46 tests and all four scripts passed. |
 | Mobile/desktop and assistive-technology manual behavior verified. | **NOT VERIFIED** | Browser inspection unavailable; manual follow-up required. |
 
 ## 12. Readiness for commit and Pull Request
 
-**READY WITH WARNINGS** for manual review and a later authorized commit/Pull Request. The feature satisfies the local milestone gate and independent QA found no confirmed defect. Manual browser/accessibility verification remains necessary for a complete responsive claim. The implementation remains a **development-only authentication demonstration**; it must not be treated as production-ready staff security. GitHub Actions can be assessed only after an authorized push. The branch is uncommitted and unpushed.
+**READY WITH WARNINGS** for manual review and a later authorized Pull Request. The feature satisfies the local milestone gate and independent QA found no confirmed defect. Manual browser/accessibility verification remains necessary for a complete responsive claim. The implementation remains a **development-only authentication demonstration**; it must not be treated as production-ready staff security. GitHub Actions can be assessed only after an authorized push. Implementation and tests are in commit `41b588c`; this report update is uncommitted. The agents did not push or open a Pull Request.
